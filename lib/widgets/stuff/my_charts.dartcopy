@@ -1,0 +1,141 @@
+import 'package:flutter/material.dart';
+import 'dart:math' as math;
+
+import 'package:mcr/bloc/bloc_meals.dart';
+import 'package:mcr/logic/User_provider.dart';
+import 'package:mcr/logic/date_formatter.dart';
+import 'package:mcr/logic/day_selector_model.dart';
+import 'package:mcr/logic/tdee_provider.dart';
+import 'package:mcr/logic/total_provder.dart';
+import 'package:mcr/models/total_model.dart';
+import 'package:mcr/models/weight_model.dart';
+import 'package:provider/provider.dart';
+class MyCharts extends StatefulWidget {
+  @override
+  _MyChartsState createState() => _MyChartsState();
+}
+  final bloc = MealsBloc();
+class _MyChartsState extends State<MyCharts> {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Consumer<DaySelectorModel>(
+        builder:(context, dateSe, child){
+        bloc.addFatToStream('%${dateSe.daySelected.day}-0${dateSe.daySelected.month}-${dateSe.daySelected.year}%');
+        return Consumer<UserProvider>(
+          builder: (context,userProvider,child){
+            double proteinGoal;
+            double fatGoal;
+            double carbsGoal;
+            double kcalGoal;
+            kcalGoal = goalCalculator(userProvider.getUserGender,userProvider.getUserWeight, userProvider.getUserHeight, userProvider.getUserAge, userProvider.getUserActivity,userProvider.getUserGoal);
+            proteinGoal = userProvider.getUserWeight * 2.2;
+            fatGoal = roundDouble((((kcalGoal) * (25/100))/9),1);
+            carbsGoal = ((kcalGoal -(proteinGoal * 4) - ((kcalGoal) * (25/100)))/4);
+            return StreamBuilder(
+              stream: bloc.totalMacros,
+              builder: (context, AsyncSnapshot<TotalMacroModel>snapshot){
+                if(!snapshot.hasData){
+                  return Text("NO DATA");
+                }
+                return Center(
+                  child: Container(
+                    //color: Colors.blue,
+                    height: MediaQuery.of(context).size.height,
+                    child: CustomPaint(
+                      painter: ShapePainter(
+                        progressIndicator1: (snapshot.data.totalCalories/kcalGoal >= 1) ? 1 : snapshot.data.totalCalories/kcalGoal,
+                        progressIndicator2: (snapshot.data.totalFats/fatGoal >= 1) ? 1 :snapshot.data.totalFats/fatGoal,
+                        progressIndicator3: (snapshot.data.totalCarbs/carbsGoal >= 1) ? 1 : snapshot.data.totalCarbs/carbsGoal,
+                        progressIndicator4: (snapshot.data.totalProtein/proteinGoal >= 1) ? 1 : snapshot.data.totalProtein/proteinGoal,
+                      ),
+                      child:Center(child: Text("${snapshot.data.totalCalories.toInt()}",style: Theme.of(context).textTheme.headline1,)),
+                    ),
+                  ),
+                );
+              }
+            ); 
+          }
+        );
+        }
+      ),
+    );
+  }
+}
+
+class ShapePainter extends CustomPainter{
+
+  final double progressIndicator1;
+  final double progressIndicator2;
+  final double progressIndicator3;
+  final double progressIndicator4;
+  ShapePainter({
+    this.progressIndicator4,
+    this.progressIndicator2, 
+    this.progressIndicator3, 
+    this.progressIndicator1
+  });
+ 
+  @override
+  
+  void paint(Canvas canvas, Size size){
+  final rect = Rect.fromLTRB(15.0,25.0, size.width - 10, size.width + 5);
+  final startAngle = -math.pi * 1.25;
+  final sweepAngle = math.pi * 1.5;
+  final useCenter = false;
+  final paint = Paint()
+    ..color = Color(0xff091118).withOpacity(0.5)
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..strokeWidth = 7;
+    final paintProgress = Paint()
+    ..color = Colors.indigo[400]
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..strokeWidth = 10;
+  final paint2 = Paint()
+    ..color = Color(0xff091118).withOpacity(0.5)
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..strokeWidth = 7;
+  final paintProgress2 = Paint()
+    ..color = Colors.blue[400]
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..strokeWidth = 10;
+  final paint3 = Paint()
+    ..color = Color(0xff091118).withOpacity(0.5)
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..strokeWidth = 7;
+  final paintProgress3 = Paint()
+    ..color = Colors.green[400]
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..strokeWidth = 10;
+  final paint4 = Paint()
+    ..color = Color(0xff091118).withOpacity(0.5)
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..strokeWidth = 7;
+  final paintProgress4 = Paint()
+    ..color = Colors.yellow[400]
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..strokeWidth = 10;
+  
+  canvas.drawArc(rect, startAngle, sweepAngle, useCenter, paint);
+  canvas.drawArc(rect, startAngle, (sweepAngle*progressIndicator1), useCenter, paintProgress);
+  canvas.drawArc(Rect.fromLTRB(15.0 + 15,25.0 + 15, size.width - 10 - 15, size.width + 5 -15), startAngle, sweepAngle, useCenter, paint2);
+  canvas.drawArc(Rect.fromLTRB(15.0 + 15,25.0 + 15, size.width - 10 - 15, size.width + 5 -15), startAngle, (sweepAngle*progressIndicator2), useCenter, paintProgress2);
+  canvas.drawArc(Rect.fromLTRB(15.0 + 30,25.0 + 30, size.width - 10 - 30, size.width + 5 -30), startAngle, sweepAngle, useCenter, paint3);
+  canvas.drawArc(Rect.fromLTRB(15.0 + 30,25.0 + 30, size.width - 10 - 30, size.width + 5 -30), startAngle,  (sweepAngle*progressIndicator3), useCenter, paintProgress3);
+  canvas.drawArc(Rect.fromLTRB(15.0 + 45,25.0 + 45, size.width - 10 - 45, size.width + 5 -45), startAngle, sweepAngle, useCenter, paint4);
+  canvas.drawArc(Rect.fromLTRB(15.0 + 45,25.0 + 45, size.width - 10 - 45, size.width + 5 -45), startAngle, (sweepAngle*progressIndicator4), useCenter, paintProgress4);
+  }
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate){
+    return false;
+  }
+}
